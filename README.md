@@ -115,15 +115,35 @@ We know the X, Y and Z position and the roll pitch yaw of the end effector, now 
     R_EE = R_z * R_y * R_x   #extrinsic rotation
     WC = EE - (0.303)*R_EE[:,2]
     
-With the wrist center position known we can calculate the first 3 joints angles can be calculated. 
+With the wrist center position known we can calculate the first 3 joints angles can be calculated using the following figure of joint 2, joint 3 and the Wrist Center (WC):
+
+![eq3](./images_pick/eq3.jpg)
 
     theta1 = atan2(WC[1],WC[0])
     
-    T0_G = Rrpy
-    T3_G_calc = inv(T0_3) * Rrpy
+    theta1_2 = acos((b*b + c*c - a*a)/(2*b*c))
+    theta2_3 = acos((a*a + c*c - b*b)/(2*a*c))
+      
+        
+    theta2 = (pi/2 -  theta1_2 - atan2(WC[2] - 0.75, sqrt(WC[0]*WC[0] + WC[1] * WC[1]) - 0.35))
+    theta3 = (pi/2 - (theta2_3 + 0.036))  #sag in link4
 
-![eq1](./images_pick/eq1.png)
-![eq2](./images_pick/eq2.png)
+Since we now know theta 1:3 we can know R0_3
+    
+    R3_EE = inv(R0_3) * R_EE
+    
+We can calculate also calculate R3_EE symbolically and compare with the above values.
+
+    R3_EE = simplify(R3_4 * R4_5 * T5_6 * R6_EE )
+
+comparing the two matrices and solving for theta 4:6 we get 
+
+    theta4 = atan2(R3_EE[2,2], -R3_EE[0,2])
+    theta6 = atan2(-R3_EE[1,1], R3_EE[1,0])
+    theta5 = atan2(sqrt(pow(R3_EE[0,2],2)+pow(R3_EE[2,2],2)), R3_EE[1,2])
+    
+    
+Here we have solved by decoupling inverse kinematics.
 
 ## Project Implementation
 
@@ -131,7 +151,11 @@ When running IK_debg we get very low errors in theta calculations. I run it for 
 
 ![bin](./images_pick/final_bin.png)
 
+Here you can see the robot in a dropping pose.
+![working](./images_pick/drop.png)
+
 ## Improvement
 
 - We can have more logic when setting the angles for joint 4 and 6 so as to prevent full circle.
-- To improve the calculation time we can certainly add a class structure that stores the matrices outside the class.
+- To improve the calculation time we can certainly add a class structure that stores the matrices outside the loop.
+
